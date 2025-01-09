@@ -1,35 +1,42 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import "./App.css";
+import PrivateRoute from "./components/auth/PrivateRoute";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import NotFound from "./pages/NotFound";
+import axios from "axios";
+import { Loader } from "./components/shared/Loader";
+import { userExists, userNotExists } from "./redux/reducers/auth";
+import { Toaster } from "react-hot-toast";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { user, isLoading } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+  useEffect(() => {
+    axios
+      .get(`${import.meta.env.VITE_SERVER}api/v1/auth/profile`, {
+        withCredentials: true,
+      })
+      .then(({ data }) => dispatch(userExists(data.user)))
+      .catch(() => dispatch(userNotExists()));
+  }, [dispatch]);
+  return isLoading ? (
+    <Loader />
+  ) : (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route element={<PrivateRoute user={!user} />}>
+          <Route path="/login" element={<Login />} />
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Toaster postition="bottom-center" />
+    </Router>
+  );
 }
 
-export default App
+export default App;
